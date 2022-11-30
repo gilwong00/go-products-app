@@ -83,6 +83,10 @@ func UpdateProduct(id int, p *Product) error {
 		return err
 	}
 
+	if pos == -1 {
+		return fmt.Errorf("Product not found")
+	}
+
 	productList[pos] = product
 	return nil
 }

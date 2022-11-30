@@ -65,6 +65,7 @@ func (p *Products) getProducts(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "Unable to marshal json", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -75,6 +76,7 @@ func (p *Products) createProduct(w http.ResponseWriter, r *http.Request) {
 	err := product.FromJSON(r.Body)
 	if err != nil {
 		http.Error(w, "Unable to unmarshal json", http.StatusBadRequest)
+		return
 	}
 
 	p.l.Printf("Product created: %#v", product)
@@ -87,7 +89,14 @@ func (p *Products) updateProduct(id int, w http.ResponseWriter, r *http.Request)
 	product := &data.Product{}
 	err := product.FromJSON(r.Body)
 	if err != nil {
-		http.Error(w, "Unable to unmarshal json", http.StatusBadRequest)
+		http.Error(w, "unable to marshal json", http.StatusNotFound)
+		return
 	}
-	data.UpdateProduct(id, product)
+
+	err = data.UpdateProduct(id, product)
+	if err != nil {
+		http.Error(w, "Product not found", http.StatusNotFound)
+		return
+	}
+
 }
