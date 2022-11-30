@@ -77,7 +77,7 @@ func AddProductToList(p *Product) {
 }
 
 func UpdateProduct(id int, p *Product) error {
-	product, pos, err := findProductById(id)
+	_, pos, err := findProductById(id)
 
 	if err != nil {
 		return err
@@ -87,6 +87,11 @@ func UpdateProduct(id int, p *Product) error {
 		return fmt.Errorf("Product not found")
 	}
 
-	productList[pos] = product
+	// productValues := reflect.ValueOf(product).Elem() // use .Elem since product is a reference to a struct
+	// productTypes := productValues.Type()
+
+	p.ID = id
+	productList[pos] = p
+
 	return nil
 }
