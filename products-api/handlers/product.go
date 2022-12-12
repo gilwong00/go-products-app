@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"products-api/data"
@@ -71,18 +72,12 @@ func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p *Products) CreateProduct(w http.ResponseWriter, r *http.Request) {
+func (p Products) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	p.l.Println("[CreateProduct handler]")
 
-	product := &data.Product{}
-	err := product.FromJSON(r.Body)
-	if err != nil {
-		http.Error(w, "Unable to unmarshal json", http.StatusBadRequest)
-		return
-	}
-
+	product := r.Context().Value(KeyProduct{}).(data.Product)
 	p.l.Printf("Product created: %#v", product)
-	data.AddProductToList(product)
+	data.AddProductToList(&product)
 }
 
 func (p *Products) UpdateProduct(w http.ResponseWriter, r *http.Request) {
@@ -94,17 +89,29 @@ func (p *Products) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product := &data.Product{}
-	err = product.FromJSON(r.Body)
-	if err != nil {
-		http.Error(w, "unable to marshal json", http.StatusNotFound)
-		return
-	}
+	product := r.Context().Value(KeyProduct{}).(data.Product)
 
-	err = data.UpdateProduct(id, product)
+	err = data.UpdateProduct(id, &product)
 	if err != nil {
 		http.Error(w, "Product not found", http.StatusNotFound)
 		return
 	}
 
+}
+
+type KeyProduct struct{}
+
+func (p Products) MiddlewareProductValidation(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		product := data.Product{}
+
+		err := product.FromJSON(r.Body)
+		if err != nil {
+			http.Error(w, "unable to marshal json", http.StatusNotFound)
+			return
+		}
+		ctx := context.WithValue(r.Context(), KeyProduct{}, product)
+		req := r.WithContext(ctx)
+		next.ServeHTTP(w, req)
+	})
 }
