@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"products-api/data"
@@ -110,6 +111,14 @@ func (p Products) MiddlewareProductValidation(next http.Handler) http.Handler {
 			http.Error(w, "unable to marshal json", http.StatusNotFound)
 			return
 		}
+
+		// validate the product
+		err = product.Validate()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("product failed validation: %s", err), http.StatusBadRequest)
+			return
+		}
+
 		ctx := context.WithValue(r.Context(), KeyProduct{}, product)
 		req := r.WithContext(ctx)
 		next.ServeHTTP(w, req)
