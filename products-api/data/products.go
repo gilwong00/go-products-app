@@ -10,15 +10,40 @@ import (
 	"github.com/go-playground/validator"
 )
 
+var ErrProductNotFound = fmt.Errorf("Product not found")
+
+//swagger:model
 type Product struct {
-	ID          int     `json:"id"`
-	Name        string  `json:"name" validate:"required"`
-	Description string  `json:"description"`
-	Price       float32 `json:"price" validate:"gt=0"`
-	SKU         string  `json:"sku" validate:"required,sku"`
-	CreatedAt   string  `json:"-"` // omitting from output
-	UpdatedAt   string  `json:"-"`
-	DeletedAt   string  `json:"-"`
+	// the id for the product
+	//
+	// required: false
+	// min: 1
+	ID int `json:"id"` // Unique identifier for the product
+
+	// the name for this poduct
+	//
+	// required: true
+	Name string `json:"name" validate:"required"`
+
+	// the description for this product
+	//
+	// required: false
+	Description string `json:"description"`
+
+	// the price for the product
+	//
+	// required: true
+	// min: 0.01
+	Price float32 `json:"price" validate:"required,gt=0"`
+
+	// the SKU for the product
+	//
+	// required: true
+	// pattern: [a-z]+-[a-z]+-[a-z]+
+	SKU       string `json:"sku" validate:"sku"`
+	CreatedAt string `json:"-"` // omitting from output
+	UpdatedAt string `json:"-"`
+	DeletedAt string `json:"-"`
 }
 
 type Products []*Product
@@ -112,4 +137,22 @@ func UpdateProduct(id int, p *Product) error {
 	productList[pos] = p
 
 	return nil
+}
+
+func DeleteProduct(id int) error {
+	i := findIndexByID(id)
+	if i == -1 {
+		return ErrProductNotFound
+	}
+	productList = append(productList[:i], productList[i+1])
+	return nil
+}
+
+func findIndexByID(id int) int {
+	for i, p := range productList {
+		if p.ID == id {
+			return i
+		}
+	}
+	return -1
 }

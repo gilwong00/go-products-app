@@ -6,9 +6,6 @@ import (
 	"log"
 	"net/http"
 	"products-api/data"
-	"strconv"
-
-	"github.com/gorilla/mux"
 )
 
 type Products struct {
@@ -61,44 +58,6 @@ func NewProducts(l *log.Logger) *Products {
 // 	// catch all
 // 	w.WriteHeader(http.StatusMethodNotAllowed)
 // }
-
-func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
-	p.l.Println("[GetProducts handler]")
-	list := data.GetProducts()
-	err := list.ToJSON(w)
-
-	if err != nil {
-		http.Error(w, "Unable to marshal json", http.StatusInternalServerError)
-		return
-	}
-}
-
-func (p Products) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	p.l.Println("[CreateProduct handler]")
-
-	product := r.Context().Value(KeyProduct{}).(data.Product)
-	p.l.Printf("Product created: %#v", product)
-	data.AddProductToList(&product)
-}
-
-func (p *Products) UpdateProduct(w http.ResponseWriter, r *http.Request) {
-	p.l.Println("[UpdateProduct handler]")
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		http.Error(w, "Unable to convert id", http.StatusBadRequest)
-		return
-	}
-
-	product := r.Context().Value(KeyProduct{}).(data.Product)
-
-	err = data.UpdateProduct(id, &product)
-	if err != nil {
-		http.Error(w, "Product not found", http.StatusNotFound)
-		return
-	}
-
-}
 
 type KeyProduct struct{}
 

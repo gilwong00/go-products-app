@@ -9,6 +9,7 @@ import (
 	"products-api/handlers"
 	"time"
 
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/gorilla/mux"
 )
 
@@ -33,6 +34,14 @@ func main() {
 	putRouter.Use(ph.MiddlewareProductValidation)
 	postRouter.HandleFunc("/", ph.CreateProduct)
 	postRouter.Use(ph.MiddlewareProductValidation)
+
+	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
+	sh := middleware.Redoc(opts, nil)
+
+	// docs route
+	getRouter.Handle("/docs", sh)
+	// this allows the docs route to serve swagger docs
+	getRouter.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 
 	// create a new server
 	s := http.Server{
