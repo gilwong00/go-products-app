@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"product-images/pkg/files"
-	"product-images/pkg/handlers"
-	"product-images/pkg/middleware"
 	"syscall"
 	"time"
+
+	"github.com/gilwong00/go-product/product-images/pkg/files"
+	"github.com/gilwong00/go-product/product-images/pkg/handlers"
+	"github.com/gilwong00/go-product/product-images/pkg/middleware"
 
 	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"

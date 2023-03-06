@@ -6,8 +6,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"products-api/handlers"
 	"time"
+
+	"github.com/gilwong00/go-product/products-api/handlers"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
 
 	"github.com/go-openapi/runtime/middleware"
 	gorillaHandlers "github.com/gorilla/handlers"
@@ -17,8 +22,17 @@ import (
 func main() {
 	l := log.New(os.Stdout, "products-api ", log.LstdFlags)
 
+	//proto client - allow insecure connection for now
+	conn, err := grpc.Dial("localhost:5000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+
+	defer conn.Close()
+	cc := protos.NewCurrencyClient(conn)
+
 	// create the handlers
-	ph := handlers.NewProducts(l)
+	ph := handlers.NewProducts(l, cc)
 
 	// create a new serve mux and register the handlers
 	// standard lib approach

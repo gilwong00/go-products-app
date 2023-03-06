@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"products-api/data"
+
+	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
+	"github.com/gilwong00/go-product/products-api/data"
 )
 
 type Products struct {
-	l *log.Logger
+	l  *log.Logger
+	cc protos.CurrencyClient
 }
 
-func NewProducts(l *log.Logger) *Products {
-	return &Products{l}
+func NewProducts(l *log.Logger, cc protos.CurrencyClient) *Products {
+	return &Products{l, cc}
 }
 
 // standard lib approach

@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"net/http"
-	"products-api/data"
 	"strconv"
+
+	"github.com/gilwong00/go-product/products-api/data"
 
 	"github.com/gorilla/mux"
 )

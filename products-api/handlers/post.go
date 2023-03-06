@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"net/http"
-	"products-api/data"
+
+	"github.com/gilwong00/go-product/products-api/data"
 )
 
 // swagger:route POST /products products createProduct

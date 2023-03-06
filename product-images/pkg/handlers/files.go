@@ -5,8 +5,9 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
-	"product-images/pkg/files"
 	"strconv"
+
+	"github.com/gilwong00/go-product/product-images/pkg/files"
 
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/go-hclog"
