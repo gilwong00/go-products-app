@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"product-images/pkg/files"
 	"product-images/pkg/handlers"
+	"product-images/pkg/middleware"
 	"syscall"
 	"time"
 
@@ -41,6 +42,10 @@ func main() {
 
 	//file handler
 	fh := handlers.NewFiles(store, l)
+
+	//middleware
+	cm := middleware.Compression{}
+
 	// create a new serve mux and register the handlers
 	sm := mux.NewRouter()
 	ch := gohandlers.CORS(gohandlers.AllowedOrigins([]string{"*"}))
@@ -50,6 +55,7 @@ func main() {
 	postHandler.HandleFunc("/", fh.MultiPartUpload)
 	getHandler.Handle("/images/{id:[0-9]+}/{filename:[a-zA-Z]+\\.[a-z]{3}}",
 		http.StripPrefix("/images/", http.FileServer(http.Dir(imagePath))))
+	getHandler.Use(cm.CompressionMiddleware)
 
 	s := http.Server{
 		Addr:         port,              // configure the bind address
