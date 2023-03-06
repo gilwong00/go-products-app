@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
 	"product-images/pkg/files"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/go-hclog"
@@ -29,6 +31,33 @@ func (f *Files) Upload(w http.ResponseWriter, r *http.Request) {
 
 	f.log.Info("Handle POST", "id", id, "filename", filename)
 	f.saveFile(id, filename, w, r.Body)
+}
+
+func (f *Files) MultiPartUpload(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseMultipartForm(128 * 1024)
+	if err != nil {
+		f.log.Error("Bad request", "error", err)
+		http.Error(w, "Expected multipart form data", http.StatusBadRequest)
+		return
+	}
+	// getting values from the UI form
+	// need to validate ID is an int
+	id, idErr := strconv.Atoi(r.FormValue("id"))
+	f.log.Info("form id", "id", id)
+	if idErr != nil {
+		f.log.Error("Bad request", "error", err)
+		http.Error(w, "Expected integer id", http.StatusBadRequest)
+		return
+	}
+
+	// getting file from form request
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		f.log.Error("Bad request", "error", err)
+		http.Error(w, "Expected file", http.StatusBadRequest)
+		return
+	}
+	f.saveFile(fmt.Sprint(id), fileHeader.Filename, w, file)
 }
 
 func (f *Files) saveFile(id string, path string, w http.ResponseWriter, r io.ReadCloser) {

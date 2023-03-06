@@ -47,7 +47,7 @@ func main() {
 	postHandler := sm.Methods(http.MethodPost).Subrouter()
 	getHandler := sm.Methods(http.MethodGet).Subrouter()
 	postHandler.HandleFunc("/images/{id:[0-9]+}/{filename:[a-zA-Z]+\\.[a-z]{3}}", fh.Upload)
-	// postHandler.HandleFunc("/")
+	postHandler.HandleFunc("/", fh.MultiPartUpload)
 	getHandler.Handle("/images/{id:[0-9]+}/{filename:[a-zA-Z]+\\.[a-z]{3}}",
 		http.StripPrefix("/images/", http.FileServer(http.Dir(imagePath))))
 
