@@ -48,6 +48,10 @@ type Product struct {
 
 type Products []*Product
 
+type GenericError struct {
+	Message string `json:"message"`
+}
+
 var productList = []*Product{
 	{
 		ID:          1,
@@ -98,12 +102,6 @@ func findProductById(id int) (*Product, int, error) {
 	return nil, -1, fmt.Errorf("Product not found")
 }
 
-func (p *Products) ToJSON(w io.Writer) error {
-	// use Encoder instead of Marshal for slight performance benefits
-	e := json.NewEncoder(w)
-	return e.Encode(p)
-}
-
 // decodes json from createProduct to match Product struct
 func (p *Product) FromJSON(r io.Reader) error {
 	e := json.NewDecoder(r)
@@ -146,6 +144,14 @@ func DeleteProduct(id int) error {
 	}
 	productList = append(productList[:i], productList[i+1])
 	return nil
+}
+
+func GetProductByID(id int) (*Product, error) {
+	i := findIndexByID(id)
+	if id == -1 {
+		return nil, ErrProductNotFound
+	}
+	return productList[i], nil
 }
 
 func findIndexByID(id int) int {

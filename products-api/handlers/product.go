@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
 	"github.com/gilwong00/go-product/products-api/data"
+	"github.com/gorilla/mux"
 )
 
 type Products struct {
-	l  *log.Logger
-	cc protos.CurrencyClient
+	l              *log.Logger
+	currencyClient protos.CurrencyClient
 }
 
-func NewProducts(l *log.Logger, cc protos.CurrencyClient) *Products {
-	return &Products{l, cc}
+func NewProducts(l *log.Logger, currencyClient protos.CurrencyClient) *Products {
+	return &Products{l, currencyClient}
 }
 
 // standard lib approach
@@ -85,4 +87,17 @@ func (p Products) MiddlewareProductValidation(next http.Handler) http.Handler {
 		req := r.WithContext(ctx)
 		next.ServeHTTP(w, req)
 	})
+}
+
+func getProductID(r *http.Request) int {
+	// parse the product id from the url
+	vars := mux.Vars(r)
+
+	// convert the id into an integer and return
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		// should never happen
+		panic(err)
+	}
+	return id
 }

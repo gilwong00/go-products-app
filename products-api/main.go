@@ -45,6 +45,7 @@ func main() {
 	putRouter := sm.Methods("PUT").Subrouter()
 	postRouter := sm.Methods("POST").Subrouter()
 	getRouter.HandleFunc("/", ph.GetProducts)
+	getRouter.HandleFunc("/{id:[0-9]+}", ph.GetProduct)
 	putRouter.HandleFunc("/{id:[0-9]+}", ph.UpdateProduct)
 	putRouter.Use(ph.MiddlewareProductValidation)
 	postRouter.HandleFunc("/", ph.CreateProduct)
