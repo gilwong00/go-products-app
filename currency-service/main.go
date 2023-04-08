@@ -20,7 +20,7 @@ func main() {
 	log := hclog.Default()
 
 	gs := grpc.NewServer()
-	c := server.NewCurrency(log)
+	c := server.NewCurrencyServer(log)
 
 	protos.RegisterCurrencyServer(gs, c)
 	//enable reflection api

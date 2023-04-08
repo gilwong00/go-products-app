@@ -13,7 +13,7 @@ type CurrencyServer struct {
 	log hclog.Logger
 }
 
-func NewCurrency(l hclog.Logger) *CurrencyServer {
+func NewCurrencyServer(l hclog.Logger) *CurrencyServer {
 	return &CurrencyServer{log: l}
 }
 
