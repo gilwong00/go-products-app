@@ -3,23 +3,28 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
 	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
 	"github.com/gilwong00/go-product/products-api/data"
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/go-hclog"
 )
 
 type Products struct {
-	l              *log.Logger
+	// l              *log.Logger
+	l              hclog.Logger
 	currencyClient protos.CurrencyClient
 	productDB      *data.ProductsDB
 }
 
-func NewProducts(l *log.Logger, currencyClient protos.CurrencyClient, productDB *data.ProductsDB) *Products {
-	return &Products{l, currencyClient, productDB}
+func NewProducts(
+	log hclog.Logger,
+	currencyClient protos.CurrencyClient,
+	productDB *data.ProductsDB,
+) *Products {
+	return &Products{log, currencyClient, productDB}
 }
 
 // standard lib approach
@@ -70,20 +75,17 @@ type KeyProduct struct{}
 func (p Products) MiddlewareProductValidation(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		product := data.Product{}
-
 		err := product.FromJSON(r.Body)
 		if err != nil {
 			http.Error(w, "unable to marshal json", http.StatusNotFound)
 			return
 		}
-
 		// validate the product
 		err = product.Validate()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("product failed validation: %s", err), http.StatusBadRequest)
 			return
 		}
-
 		ctx := context.WithValue(r.Context(), KeyProduct{}, product)
 		req := r.WithContext(ctx)
 		next.ServeHTTP(w, req)
@@ -93,7 +95,6 @@ func (p Products) MiddlewareProductValidation(next http.Handler) http.Handler {
 func getProductID(r *http.Request) int {
 	// parse the product id from the url
 	vars := mux.Vars(r)
-
 	// convert the id into an integer and return
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {

@@ -16,9 +16,8 @@ import (
 
 // Create handles POST requests to add new products
 func (p Products) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	p.l.Println("[CreateProduct handler]")
-
+	p.l.Debug("[CreateProduct handler]")
 	product := r.Context().Value(KeyProduct{}).(data.Product)
-	p.l.Printf("Product created: %#v", product)
+	p.l.Debug("Product created: %#v", product)
 	data.AddProductToList(&product)
 }
