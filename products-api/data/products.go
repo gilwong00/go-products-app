@@ -1,13 +1,16 @@
 package data
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"regexp"
 	"time"
 
+	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
 	"github.com/go-playground/validator"
+	"github.com/hashicorp/go-hclog"
 )
 
 var ErrProductNotFound = fmt.Errorf("Product not found")
@@ -48,6 +51,11 @@ type Product struct {
 
 type Products []*Product
 
+type ProductsDB struct {
+	currency protos.CurrencyClient
+	log      hclog.Logger
+}
+
 type GenericError struct {
 	Message string `json:"message"`
 }
@@ -73,11 +81,14 @@ var productList = []*Product{
 	},
 }
 
+func NewProductDB(currency protos.CurrencyClient, log hclog.Logger) *ProductsDB {
+	return &ProductsDB{currency, log}
+}
+
 func (p *Product) Validate() error {
 	validate := validator.New()
 	validate.RegisterValidation("sku", validateSku)
 	return validate.Struct(p)
-
 }
 
 func validateSku(fl validator.FieldLevel) bool {
@@ -108,8 +119,51 @@ func (p *Product) FromJSON(r io.Reader) error {
 	return e.Decode(p)
 }
 
-func GetProducts() Products {
-	return productList
+func (p *ProductsDB) GetProducts(currency string) (Products, error) {
+	if currency == "" {
+		return productList, nil
+	}
+	rate, err := p.getRateForProduct(currency)
+	if err != nil {
+		p.log.Error("unable to get rate", "currenct", currency, "error", err)
+		return nil, err
+	}
+	response := Products{}
+	for _, product := range productList {
+		p := *product
+		p.Price = p.Price * float32(rate)
+		response = append(response, &p)
+	}
+	return response, nil
+}
+
+func (p *ProductsDB) GetProductByID(id int, currency string) (*Product, error) {
+	i := findIndexByID(id)
+	if id == -1 {
+		return nil, ErrProductNotFound
+	}
+	if currency == "" {
+		return productList[i], nil
+	}
+	rate, err := p.getRateForProduct(currency)
+	if err != nil {
+		p.log.Error("unable to get rate", "currenct", currency, "error", err)
+		return nil, err
+	}
+	// take a copy because productList is a reference so if we mutate the actual
+	// value in the productList, we update the actual collection item instead of returning a specific update
+	product := *productList[i]
+	product.Price = float32(rate)
+	return &product, nil
+}
+
+func (p *ProductsDB) getRateForProduct(finalCurrency string) (float64, error) {
+	request := &protos.GetCurrencyRateRequest{
+		Initial: protos.Currencies(protos.Currencies_value["EUR"]),
+		Final:   protos.Currencies(protos.Currencies_value[finalCurrency]),
+	}
+	rate, err := p.currency.GetCurrencyRate(context.Background(), request)
+	return rate.Rate, err
 }
 
 func AddProductToList(p *Product) {
@@ -119,21 +173,16 @@ func AddProductToList(p *Product) {
 
 func UpdateProduct(id int, p *Product) error {
 	_, pos, err := findProductById(id)
-
 	if err != nil {
 		return err
 	}
-
 	if pos == -1 {
 		return fmt.Errorf("Product not found")
 	}
-
 	// productValues := reflect.ValueOf(product).Elem() // use .Elem since product is a reference to a struct
 	// productTypes := productValues.Type()
-
 	p.ID = id
 	productList[pos] = p
-
 	return nil
 }
 
@@ -144,14 +193,6 @@ func DeleteProduct(id int) error {
 	}
 	productList = append(productList[:i], productList[i+1])
 	return nil
-}
-
-func GetProductByID(id int) (*Product, error) {
-	i := findIndexByID(id)
-	if id == -1 {
-		return nil, ErrProductNotFound
-	}
-	return productList[i], nil
 }
 
 func findIndexByID(id int) int {

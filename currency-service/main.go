@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/gilwong00/go-product/currency-service/data"
 	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
 	"github.com/gilwong00/go-product/currency-service/server"
 
@@ -18,18 +19,22 @@ const (
 
 func main() {
 	log := hclog.Default()
-
-	gs := grpc.NewServer()
-	c := server.NewCurrencyServer(log)
-
-	protos.RegisterCurrencyServer(gs, c)
-	//enable reflection api
-	reflection.Register(gs)
-
+	grpcService := grpc.NewServer()
+	rates, err := data.NewExchangeRange(log)
+	if err != nil {
+		log.Error("Unable to generate rates", "error", err)
+		os.Exit(1)
+	}
+	c := server.NewCurrencyServer(rates, log)
+	protos.RegisterCurrencyServer(grpcService, c)
+	// enable reflection api
+	// reflection allows us to list all the rpc methods our currency service has
+	// grpcurl --plaintext localhost:5000 list
+	reflection.Register(grpcService)
 	l, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Error("Unable to listen", "error", err)
 		os.Exit(1)
 	}
-	gs.Serve(l)
+	grpcService.Serve(l)
 }

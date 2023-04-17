@@ -15,9 +15,15 @@ import (
 //	200: productsResponse
 func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
 	p.l.Println("[GetProducts handler]")
-	list := data.GetProducts()
-	err := data.ToJSON(list, w)
-
+	w.Header().Add("Content-Type", "application/json")
+	currency := r.URL.Query().Get("currency")
+	products, err := p.productDB.GetProducts(currency)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		data.ToJSON(&data.GenericError{Message: err.Error()}, w)
+		return
+	}
+	err = data.ToJSON(products, w)
 	if err != nil {
 		http.Error(w, "Unable to marshal json", http.StatusInternalServerError)
 		return
@@ -33,10 +39,10 @@ func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
 // GetProduct handles GET requests
 func (p *Products) GetProduct(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-
+	currency := r.URL.Query().Get("currency")
 	id := getProductID(r)
 	p.l.Println("[DEBUG] get record id", id)
-	prod, err := data.GetProductByID(id)
+	prod, err := p.productDB.GetProductByID(id, currency)
 
 	switch err {
 	case nil:

@@ -15,10 +15,11 @@ import (
 type Products struct {
 	l              *log.Logger
 	currencyClient protos.CurrencyClient
+	productDB      *data.ProductsDB
 }
 
-func NewProducts(l *log.Logger, currencyClient protos.CurrencyClient) *Products {
-	return &Products{l, currencyClient}
+func NewProducts(l *log.Logger, currencyClient protos.CurrencyClient, productDB *data.ProductsDB) *Products {
+	return &Products{l, currencyClient, productDB}
 }
 
 // standard lib approach
