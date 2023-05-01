@@ -41,7 +41,7 @@ type Product struct {
 	//
 	// required: true
 	// pattern: [a-z]+-[a-z]+-[a-z]+
-	SKU       string `json:"sku"`
+	SKU       string `json:"sku" validate:"sku"`
 	CreatedAt string `json:"-"` // omitting from output
 	UpdatedAt string `json:"-"`
 	DeletedAt string `json:"-"`

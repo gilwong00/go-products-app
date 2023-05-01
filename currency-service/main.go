@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/gilwong00/go-product/currency-service/data"
+	internal "github.com/gilwong00/go-product/currency-service/internal"
 	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
-	"github.com/gilwong00/go-product/currency-service/server"
 
 	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc"
@@ -25,7 +25,7 @@ func main() {
 		log.Error("Unable to generate rates", "error", err)
 		os.Exit(1)
 	}
-	c := server.NewCurrencyServer(rates, log)
+	c := internal.NewCurrencyServer(rates, log)
 	protos.RegisterCurrencyServer(grpcService, c)
 	// enable reflection api
 	// reflection allows us to list all the rpc methods our currency service has
@@ -36,5 +36,9 @@ func main() {
 		log.Error("Unable to listen", "error", err)
 		os.Exit(1)
 	}
-	grpcService.Serve(l)
+	err = grpcService.Serve(l)
+	if err != nil {
+		log.Error("unable to start grpc service", "error", err)
+		os.Exit(1)
+	}
 }
