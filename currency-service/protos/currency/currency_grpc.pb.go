@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CurrencyClient interface {
 	GetCurrencyRate(ctx context.Context, in *GetCurrencyRateRequest, opts ...grpc.CallOption) (*GetCurrencyRateResponse, error)
+	StreamCurrencyRates(ctx context.Context, opts ...grpc.CallOption) (Currency_StreamCurrencyRatesClient, error)
 }
 
 type currencyClient struct {
@@ -42,11 +43,43 @@ func (c *currencyClient) GetCurrencyRate(ctx context.Context, in *GetCurrencyRat
 	return out, nil
 }
 
+func (c *currencyClient) StreamCurrencyRates(ctx context.Context, opts ...grpc.CallOption) (Currency_StreamCurrencyRatesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Currency_ServiceDesc.Streams[0], "/currency.Currency/StreamCurrencyRates", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &currencyStreamCurrencyRatesClient{stream}
+	return x, nil
+}
+
+type Currency_StreamCurrencyRatesClient interface {
+	Send(*StreamCurrencyRateRequest) error
+	Recv() (*StreamCurrencyRateResponse, error)
+	grpc.ClientStream
+}
+
+type currencyStreamCurrencyRatesClient struct {
+	grpc.ClientStream
+}
+
+func (x *currencyStreamCurrencyRatesClient) Send(m *StreamCurrencyRateRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *currencyStreamCurrencyRatesClient) Recv() (*StreamCurrencyRateResponse, error) {
+	m := new(StreamCurrencyRateResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // CurrencyServer is the server API for Currency service.
 // All implementations must embed UnimplementedCurrencyServer
 // for forward compatibility
 type CurrencyServer interface {
 	GetCurrencyRate(context.Context, *GetCurrencyRateRequest) (*GetCurrencyRateResponse, error)
+	StreamCurrencyRates(Currency_StreamCurrencyRatesServer) error
 	mustEmbedUnimplementedCurrencyServer()
 }
 
@@ -56,6 +89,9 @@ type UnimplementedCurrencyServer struct {
 
 func (UnimplementedCurrencyServer) GetCurrencyRate(context.Context, *GetCurrencyRateRequest) (*GetCurrencyRateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCurrencyRate not implemented")
+}
+func (UnimplementedCurrencyServer) StreamCurrencyRates(Currency_StreamCurrencyRatesServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamCurrencyRates not implemented")
 }
 func (UnimplementedCurrencyServer) mustEmbedUnimplementedCurrencyServer() {}
 
@@ -88,6 +124,32 @@ func _Currency_GetCurrencyRate_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Currency_StreamCurrencyRates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(CurrencyServer).StreamCurrencyRates(&currencyStreamCurrencyRatesServer{stream})
+}
+
+type Currency_StreamCurrencyRatesServer interface {
+	Send(*StreamCurrencyRateResponse) error
+	Recv() (*StreamCurrencyRateRequest, error)
+	grpc.ServerStream
+}
+
+type currencyStreamCurrencyRatesServer struct {
+	grpc.ServerStream
+}
+
+func (x *currencyStreamCurrencyRatesServer) Send(m *StreamCurrencyRateResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *currencyStreamCurrencyRatesServer) Recv() (*StreamCurrencyRateRequest, error) {
+	m := new(StreamCurrencyRateRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Currency_ServiceDesc is the grpc.ServiceDesc for Currency service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -100,6 +162,13 @@ var Currency_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Currency_GetCurrencyRate_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamCurrencyRates",
+			Handler:       _Currency_StreamCurrencyRates_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "protos/currency.proto",
 }

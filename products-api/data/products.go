@@ -50,8 +50,10 @@ type Product struct {
 type Products []*Product
 
 type ProductsDB struct {
-	currency protos.CurrencyClient
-	log      hclog.Logger
+	currency     protos.CurrencyClient
+	log          hclog.Logger
+	rates        map[string]float64
+	streamClient protos.Currency_StreamCurrencyRatesClient
 }
 
 type GenericError struct {
@@ -80,7 +82,25 @@ var productList = []*Product{
 }
 
 func NewProductDB(currency protos.CurrencyClient, log hclog.Logger) *ProductsDB {
-	return &ProductsDB{currency, log}
+	db := &ProductsDB{currency, log, make(map[string]float64), nil}
+	go db.handleCurrencyUpdates()
+	return db
+}
+
+func (p *ProductsDB) handleCurrencyUpdates() {
+	client, err := p.currency.StreamCurrencyRates(context.Background())
+	if err != nil {
+		p.log.Error("unable to subscribe to rate changes")
+	}
+	p.streamClient = client
+	for {
+		rateRequest, err := client.Recv()
+		p.log.Info("received update rate from service", "final", rateRequest.GetFinal().String())
+		if err != nil {
+			p.log.Error("error receiving message")
+		}
+		p.rates[rateRequest.Final.String()] = rateRequest.Rate
+	}
 }
 
 // decodes json from createProduct to match Product struct
@@ -165,6 +185,22 @@ func findIndexByID(id int) int {
 	return -1
 }
 
+func (p *ProductsDB) getRateForProduct(finalCurrency string) (float64, error) {
+	if rate, ok := p.rates[finalCurrency]; ok {
+		return rate, nil
+	}
+	request := &protos.GetCurrencyRateRequest{
+		Initial: protos.Currencies(protos.Currencies_value["EUR"]),
+		Final:   protos.Currencies(protos.Currencies_value[finalCurrency]),
+	}
+	// get initial rate
+	rate, err := p.currency.GetCurrencyRate(context.Background(), request)
+	p.rates[finalCurrency] = rate.Rate
+	// sub to currency service to get updates
+	p.streamClient.Send((*protos.StreamCurrencyRateRequest)(request))
+	return rate.Rate, err
+}
+
 // func generateId() int {
 // 	product := productList[len(productList)-1]
 // 	return product.ID + 1
@@ -178,12 +214,3 @@ func findIndexByID(id int) int {
 // 	}
 // 	return nil, -1, fmt.Errorf("Product not found")
 // }
-
-func (p *ProductsDB) getRateForProduct(finalCurrency string) (float64, error) {
-	request := &protos.GetCurrencyRateRequest{
-		Initial: protos.Currencies(protos.Currencies_value["EUR"]),
-		Final:   protos.Currencies(protos.Currencies_value[finalCurrency]),
-	}
-	rate, err := p.currency.GetCurrencyRate(context.Background(), request)
-	return rate.Rate, err
-}

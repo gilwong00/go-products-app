@@ -6,6 +6,7 @@ option go_package = "protos/currency;currency";
 
 service Currency {
 	rpc GetCurrencyRate(GetCurrencyRateRequest) returns (GetCurrencyRateResponse);
+	rpc StreamCurrencyRates(stream StreamCurrencyRateRequest) returns (stream StreamCurrencyRateResponse);
 }
 
 message GetCurrencyRateRequest {
@@ -16,6 +17,18 @@ message GetCurrencyRateRequest {
 message GetCurrencyRateResponse {
 	double rate = 1;
 }
+
+message StreamCurrencyRateRequest {
+	Currencies initial = 1;
+	Currencies final = 2;
+}
+
+message StreamCurrencyRateResponse {
+	Currencies initial = 1;
+	Currencies final = 2;
+	double rate = 3;
+}
+
 
 enum Currencies {
   EUR=0;
