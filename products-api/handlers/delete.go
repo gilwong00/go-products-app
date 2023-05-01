@@ -2,11 +2,8 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gilwong00/go-product/products-api/data"
-
-	"github.com/gorilla/mux"
 )
 
 // swagger:route DELETE /products/{id} products deleteProduct
@@ -17,15 +14,22 @@ import (
 
 // DeleteProduct deletes a product from the database
 func (p *Products) DeleteProduct(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, _ := strconv.Atoi(vars["id"])
-	err := data.DeleteProduct(id)
+	w.Header().Add("Content-Type", "application/json")
+	id := getProductID(r)
+	p.l.Debug("Deleting record", "id", id)
+	err := p.productDB.DeleteProduct(id)
 	if err == data.ErrProductNotFound {
-		http.Error(w, "Product not found", http.StatusNotFound)
+		p.l.Error("Unable to delete record id does not exist")
+		w.WriteHeader(http.StatusNotFound)
+		data.ToJSON(&data.GenericError{Message: err.Error()}, w)
+		// http.Error(w, "Product not found", http.StatusNotFound)
 		return
 	}
 	if err != nil {
-		http.Error(w, "Error deleting product", http.StatusInternalServerError)
+		p.l.Error("Unable to delete record", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		data.ToJSON(&data.GenericError{Message: err.Error()}, w)
 		return
 	}
+	w.WriteHeader(http.StatusNoContent)
 }

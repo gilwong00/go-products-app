@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gilwong00/go-product/products-api/data"
@@ -36,9 +37,9 @@ func main() {
 	cc := protos.NewCurrencyClient(conn)
 	// create database instance
 	db := data.NewProductDB(cc, l)
-
+	validator := data.NewValidation()
 	// create the handlers
-	ph := handlers.NewProducts(l, cc, db)
+	ph := handlers.NewProducts(l, validator, db)
 
 	// create a new serve mux and register the handlers
 	// standard lib approach
@@ -47,15 +48,24 @@ func main() {
 
 	sm := mux.NewRouter()
 
-	getRouter := sm.Methods("GET").Subrouter()
-	putRouter := sm.Methods("PUT").Subrouter()
-	postRouter := sm.Methods("POST").Subrouter()
+	// GET Routes
+	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/", ph.GetProducts)
 	getRouter.HandleFunc("/{id:[0-9]+}", ph.GetProduct)
+
+	// PUT Routes
+	putRouter := sm.Methods(http.MethodPut).Subrouter()
 	putRouter.HandleFunc("/{id:[0-9]+}", ph.UpdateProduct)
 	putRouter.Use(ph.MiddlewareProductValidation)
+
+	// POST Routes
+	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/", ph.CreateProduct)
 	postRouter.Use(ph.MiddlewareProductValidation)
+
+	// DELETE Routes
+	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
+	deleteRouter.HandleFunc("/products/{id:[0-9]+}", ph.DeleteProduct)
 
 	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
 	sh := middleware.Redoc(opts, nil)
@@ -95,7 +105,8 @@ func main() {
 	// trap sigterm or interupt and gracefully shutdown the server
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, os.Kill)
+	// signal.Notify(c, os.Kill)
+	signal.Notify(c, syscall.SIGTERM)
 
 	// Block until a signal is received.
 	sig := <-c

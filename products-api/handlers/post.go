@@ -19,5 +19,5 @@ func (p Products) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	p.l.Debug("[CreateProduct handler]")
 	product := r.Context().Value(KeyProduct{}).(data.Product)
 	p.l.Debug("Product created: %#v", product)
-	data.AddProductToList(&product)
+	p.productDB.AddProduct(product)
 }

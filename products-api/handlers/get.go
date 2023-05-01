@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 
-	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
 	"github.com/gilwong00/go-product/products-api/data"
 )
 
@@ -48,7 +46,6 @@ func (p *Products) GetProduct(w http.ResponseWriter, r *http.Request) {
 	case nil:
 	case data.ErrProductNotFound:
 		p.l.Debug("[ERROR] fetching product", err)
-
 		w.WriteHeader(http.StatusNotFound)
 		data.ToJSON(&data.GenericError{Message: err.Error()}, w)
 		return
@@ -58,19 +55,6 @@ func (p *Products) GetProduct(w http.ResponseWriter, r *http.Request) {
 		data.ToJSON(&data.GenericError{Message: err.Error()}, w)
 		return
 	}
-	// get exchange rate
-	request := &protos.GetCurrencyRateRequest{
-		Initial: protos.Currencies(protos.Currencies_value["EUR"]),
-		Final:   protos.Currencies(protos.Currencies_value["GBP"]),
-	}
-	resp, err := p.currencyClient.GetCurrencyRate(context.Background(), request)
-	if err != nil {
-		p.l.Debug("[Error] error getting new rate", err)
-		data.ToJSON(&data.GenericError{Message: err.Error()}, w)
-		return
-	}
-	p.l.Debug("Resp %#v", resp.Rate)
-	prod.Price = prod.Price * float32(resp.Rate)
 	err = data.ToJSON(prod, w)
 	if err != nil {
 		// we should never be here but log the error just incase

@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"regexp"
 	"time"
 
 	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
-	"github.com/go-playground/validator"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -43,7 +41,7 @@ type Product struct {
 	//
 	// required: true
 	// pattern: [a-z]+-[a-z]+-[a-z]+
-	SKU       string `json:"sku" validate:"sku"`
+	SKU       string `json:"sku"`
 	CreatedAt string `json:"-"` // omitting from output
 	UpdatedAt string `json:"-"`
 	DeletedAt string `json:"-"`
@@ -83,34 +81,6 @@ var productList = []*Product{
 
 func NewProductDB(currency protos.CurrencyClient, log hclog.Logger) *ProductsDB {
 	return &ProductsDB{currency, log}
-}
-
-func (p *Product) Validate() error {
-	validate := validator.New()
-	validate.RegisterValidation("sku", validateSku)
-	return validate.Struct(p)
-}
-
-func validateSku(fl validator.FieldLevel) bool {
-	// sku looks like xxx-asdx-asdsadad
-	re := regexp.MustCompile(`[a-z]+-[a-z]+-[a-z]+`)
-	matches := re.FindAllString(fl.Field().String(), -1)
-	return len(matches) == 1
-
-}
-
-func generateId() int {
-	product := productList[len(productList)-1]
-	return product.ID + 1
-}
-
-func findProductById(id int) (*Product, int, error) {
-	for i, p := range productList {
-		if p.ID == id {
-			return p, i, nil
-		}
-	}
-	return nil, -1, fmt.Errorf("Product not found")
 }
 
 // decodes json from createProduct to match Product struct
@@ -157,40 +127,31 @@ func (p *ProductsDB) GetProductByID(id int, currency string) (*Product, error) {
 	return &product, nil
 }
 
-func (p *ProductsDB) getRateForProduct(finalCurrency string) (float64, error) {
-	request := &protos.GetCurrencyRateRequest{
-		Initial: protos.Currencies(protos.Currencies_value["EUR"]),
-		Final:   protos.Currencies(protos.Currencies_value[finalCurrency]),
-	}
-	rate, err := p.currency.GetCurrencyRate(context.Background(), request)
-	return rate.Rate, err
+// AddProduct adds a new product to the database
+func (p *ProductsDB) AddProduct(pr Product) {
+	// get the next id in sequence
+	id := productList[len(productList)-1].ID
+	pr.ID = id + 1
+	productList = append(productList, &pr)
 }
 
-func AddProductToList(p *Product) {
-	p.ID = generateId()
-	productList = append(productList, p)
-}
-
-func UpdateProduct(id int, p *Product) error {
-	_, pos, err := findProductById(id)
-	if err != nil {
-		return err
-	}
-	if pos == -1 {
-		return fmt.Errorf("Product not found")
+func (p *ProductsDB) UpdateProduct(product Product) error {
+	i := findIndexByID(product.ID)
+	if i == -1 {
+		return ErrProductNotFound
 	}
 	// productValues := reflect.ValueOf(product).Elem() // use .Elem since product is a reference to a struct
 	// productTypes := productValues.Type()
-	p.ID = id
-	productList[pos] = p
+	productList[i] = &product
 	return nil
 }
 
-func DeleteProduct(id int) error {
+func (p *ProductsDB) DeleteProduct(id int) error {
 	i := findIndexByID(id)
 	if i == -1 {
 		return ErrProductNotFound
 	}
+	//removing product from list
 	productList = append(productList[:i], productList[i+1])
 	return nil
 }
@@ -202,4 +163,27 @@ func findIndexByID(id int) int {
 		}
 	}
 	return -1
+}
+
+// func generateId() int {
+// 	product := productList[len(productList)-1]
+// 	return product.ID + 1
+// }
+
+// func findProductById(id int) (*Product, int, error) {
+// 	for i, p := range productList {
+// 		if p.ID == id {
+// 			return p, i, nil
+// 		}
+// 	}
+// 	return nil, -1, fmt.Errorf("Product not found")
+// }
+
+func (p *ProductsDB) getRateForProduct(finalCurrency string) (float64, error) {
+	request := &protos.GetCurrencyRateRequest{
+		Initial: protos.Currencies(protos.Currencies_value["EUR"]),
+		Final:   protos.Currencies(protos.Currencies_value[finalCurrency]),
+	}
+	rate, err := p.currency.GetCurrencyRate(context.Background(), request)
+	return rate.Rate, err
 }
