@@ -25,13 +25,11 @@ import (
 func main() {
 	// l := log.New(os.Stdout, "products-api ", log.LstdFlags)
 	l := hclog.Default()
-
 	//proto client - allow insecure connection for now
 	conn, err := grpc.Dial("localhost:5000", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
 	}
-
 	defer conn.Close()
 	// create proto client for currency
 	cc := protos.NewCurrencyClient(conn)
@@ -39,7 +37,7 @@ func main() {
 	db := data.NewProductDB(cc, l)
 	validator := data.NewValidation()
 	// create the handlers
-	ph := handlers.NewProducts(l, validator, db)
+	ph := handlers.NewProductsHandler(l, validator, db)
 
 	// create a new serve mux and register the handlers
 	// standard lib approach
@@ -47,20 +45,19 @@ func main() {
 	// sm.Handle("/", ph)
 
 	sm := mux.NewRouter()
-
 	// GET Routes
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/", ph.GetProducts)
-	getRouter.HandleFunc("/{id:[0-9]+}", ph.GetProduct)
+	getRouter.HandleFunc("/products", ph.GetProducts)
+	getRouter.HandleFunc("/products/{id:[0-9]+}", ph.GetProduct)
 
 	// PUT Routes
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/{id:[0-9]+}", ph.UpdateProduct)
+	putRouter.HandleFunc("/products/{id:[0-9]+}", ph.UpdateProduct)
 	putRouter.Use(ph.MiddlewareProductValidation)
 
 	// POST Routes
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/", ph.CreateProduct)
+	postRouter.HandleFunc("/products", ph.CreateProduct)
 	postRouter.Use(ph.MiddlewareProductValidation)
 
 	// DELETE Routes
@@ -113,6 +110,7 @@ func main() {
 	log.Println("Got signal:", sig)
 
 	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
-	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	s.Shutdown(ctx)
 }

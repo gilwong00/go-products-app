@@ -22,7 +22,7 @@ type ValidationError struct {
 	Messages []string `json:"messages"`
 }
 
-func NewProducts(
+func NewProductsHandler(
 	log hclog.Logger,
 	validator *data.Validation,
 	productDB *data.ProductsDB,

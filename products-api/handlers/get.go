@@ -41,7 +41,6 @@ func (p *Products) GetProduct(w http.ResponseWriter, r *http.Request) {
 	id := getProductID(r)
 	p.l.Debug("[DEBUG] get record id", id)
 	prod, err := p.productDB.GetProductByID(id, currency)
-
 	switch err {
 	case nil:
 	case data.ErrProductNotFound:

@@ -9,6 +9,8 @@ import (
 
 	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
 	"github.com/hashicorp/go-hclog"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var ErrProductNotFound = fmt.Errorf("Product not found")
@@ -186,6 +188,7 @@ func findIndexByID(id int) int {
 }
 
 func (p *ProductsDB) getRateForProduct(finalCurrency string) (float64, error) {
+	// get from cache
 	if rate, ok := p.rates[finalCurrency]; ok {
 		return rate, nil
 	}
@@ -195,6 +198,17 @@ func (p *ProductsDB) getRateForProduct(finalCurrency string) (float64, error) {
 	}
 	// get initial rate
 	rate, err := p.currency.GetCurrencyRate(context.Background(), request)
+	if err != nil {
+		// convert basic error into a rich gRPC error
+		if s, ok := status.FromError(err); ok {
+			metadata := s.Details()[0].(*protos.GetCurrencyRateRequest)
+			if s.Code() == codes.InvalidArgument {
+				return -1, fmt.Errorf("unable to get rate, initial and final cannot be the same value")
+			}
+			return -1, fmt.Errorf("unable to get rate from currency service, inital: %s, final: %s", metadata.Initial.String(), metadata.Final.String())
+		}
+		return -1, err
+	}
 	p.rates[finalCurrency] = rate.Rate
 	// sub to currency service to get updates
 	p.streamClient.Send((*protos.StreamCurrencyRateRequest)(request))
