@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
+	protos "github.com/gilwong00/go-product/currency-service/proto/currency"
 	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -97,11 +97,30 @@ func (p *ProductsDB) handleCurrencyUpdates() {
 	p.streamClient = client
 	for {
 		rateRequest, err := client.Recv()
-		p.log.Info("received update rate from service", "final", rateRequest.GetFinal().String())
+		// handle connection errors
+		// this is normally terminal requires a reconnect
 		if err != nil {
-			p.log.Error("error receiving message")
+			p.log.Error("error while listening for message", "error", err)
+			return
 		}
-		p.rates[rateRequest.Final.String()] = rateRequest.Rate
+		//handle streaming error
+		if grpcError := rateRequest.GetError(); grpcError != nil {
+			streamError := status.FromProto(grpcError)
+			if streamError.Code() == codes.InvalidArgument {
+				errDetails := ""
+				if details := streamError.Details(); len(details) > 0 {
+					p.log.Error("error details", "details", details)
+					if rateReq, ok := details[0].(*protos.StreamCurrencyRateRequest); ok {
+						errDetails = fmt.Sprintf("base: %s destination: %s", rateReq.GetInitial().String(), rateReq.GetFinal().String())
+					}
+				}
+				p.log.Error("received error from currency service subscription", "error", grpcError.GetMessage(), "details", errDetails)
+			}
+		}
+		if newRate := rateRequest.GetRateResponse(); newRate != nil {
+			p.log.Info("received update rate from service", "final", newRate.Final)
+			p.rates[newRate.Final.String()] = newRate.Rate
+		}
 	}
 }
 
@@ -145,7 +164,7 @@ func (p *ProductsDB) GetProductByID(id int, currency string) (*Product, error) {
 	// take a copy because productList is a reference so if we mutate the actual
 	// value in the productList, we update the actual collection item instead of returning a specific update
 	product := *productList[i]
-	product.Price = float32(rate)
+	product.Price = product.Price * float32(rate)
 	return &product, nil
 }
 

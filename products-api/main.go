@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
+	protos "github.com/gilwong00/go-product/currency-service/proto/currency"
 
 	"github.com/go-openapi/runtime/middleware"
 	gorillaHandlers "github.com/gorilla/handlers"

@@ -19,11 +19,13 @@ func (c *CurrencyServer) StreamCurrencyRates(s protos.Currency_StreamCurrencyRat
 		// io.EOF signals that the client has closed the connection
 		if err == io.EOF {
 			c.log.Info("client closed connection")
+			delete(c.subscriptions, s)
 			break
 		}
 		// all other errors meants the transport between server and client is unavailable
 		if err != nil {
 			c.log.Error("unable to read from client", "error", err)
+			delete(c.subscriptions, s)
 			return err
 		}
 		c.log.Info("handle client request", "request", req)
@@ -34,8 +36,8 @@ func (c *CurrencyServer) StreamCurrencyRates(s protos.Currency_StreamCurrencyRat
 		}
 		// check that subscription does not exist
 		for _, v := range requests {
+			// subscription already exists, send error
 			if v.Initial == req.Initial && v.Final == req.Final {
-				// subscription already exists
 				c.log.Error("subscription is already active", "initial", req.Initial.String(), "final", req.Final.String())
 				grpcError := status.New(codes.InvalidArgument, "subscription is already active")
 				grpcError, err = grpcError.WithDetails(req)
