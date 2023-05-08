@@ -1,8 +1,12 @@
 syntax = "proto3";
 
+// import "google/protobuf/timestamp.proto";
+import "google/rpc/status.proto";
+
 package currency;
 
-option go_package = "protos/currency;currency";
+option go_package = "proto/currency;currency";
+
 
 service Currency {
 	rpc GetCurrencyRate(GetCurrencyRateRequest) returns (GetCurrencyRateResponse);
@@ -23,10 +27,17 @@ message StreamCurrencyRateRequest {
 	Currencies final = 2;
 }
 
-message StreamCurrencyRateResponse {
+message StreamRateResponse {
 	Currencies initial = 1;
 	Currencies final = 2;
 	double rate = 3;
+}
+
+message StreamCurrencyRateResponse {
+	oneof message {
+		StreamRateResponse rate_response = 1;
+		google.rpc.Status error = 2;
+	}
 }
 
 

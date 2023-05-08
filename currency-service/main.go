@@ -6,7 +6,7 @@ import (
 
 	"github.com/gilwong00/go-product/currency-service/data"
 	internal "github.com/gilwong00/go-product/currency-service/internal"
-	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
+	protos "github.com/gilwong00/go-product/currency-service/proto/currency"
 
 	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc"

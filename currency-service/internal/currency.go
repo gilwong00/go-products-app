@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gilwong00/go-product/currency-service/data"
-	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
+	protos "github.com/gilwong00/go-product/currency-service/proto/currency"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -34,11 +34,19 @@ func (c *CurrencyServer) handleCurrencyUpdates() {
 				if err != nil {
 					c.log.Error("unable to get updated rate", err)
 				}
-				client.Send(&protos.StreamCurrencyRateResponse{
-					Initial: rateRequest.Initial,
-					Final:   rateRequest.Final,
-					Rate:    rate,
+				// send response to client
+				err = client.Send(&protos.StreamCurrencyRateResponse{
+					Message: &protos.StreamCurrencyRateResponse_RateResponse{
+						RateResponse: &protos.StreamRateResponse{
+							Initial: rateRequest.Initial,
+							Final:   rateRequest.Final,
+							Rate:    rate,
+						},
+					},
 				})
+				if err != nil {
+					c.log.Error("Unable to send updated rate", "initial", rateRequest.GetInitial().String(), "final", rateRequest.GetFinal().String())
+				}
 			}
 		}
 	}

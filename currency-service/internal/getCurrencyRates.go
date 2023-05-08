@@ -3,7 +3,7 @@ package internal
 import (
 	"context"
 
-	protos "github.com/gilwong00/go-product/currency-service/protos/currency"
+	protos "github.com/gilwong00/go-product/currency-service/proto/currency"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
